@@ -154,4 +154,14 @@ export type AgentReports = {
   AdversarialVerifier?: AdversarialVerifierReport;
   ExplanationAgent?: ExplanationAgentReport;
   CommunicationAgent?: CommunicationAgentReport;
+  SatelliteAgent?: AgentReport & {
+    scene_id?: string;
+    scene_datetime?: string;
+    scene_cloud_cover?: number;
+    field_pixels?: number;
+    usable_pixels?: number;
+    predicted_crop?: string;
+    claimed_crop_probability?: number;
+    top_class_probability?: number;
+  };
 };

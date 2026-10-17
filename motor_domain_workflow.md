@@ -23,16 +23,22 @@ flowchart TB
     subgraph LANGGRAPH["⚙️ LangGraph Motor Pipeline"]
         direction TB
 
-        subgraph AGENTS["8-Agent Sequential Chain"]
+        subgraph PARALLEL_FANOUT["Evidence Collection Fan-Out (Concurrent)"]
             A1["1️⃣ ImageAgent<br/>ResNet-50 Vehicle Damage CNN<br/>→ damage_type, severity, confidence"]
-            A2["2️⃣ SensorAgent<br/>XGBoost Telemetry Model<br/>→ anomaly_score, impact_vector"]
-            A3["3️⃣ TextAgent<br/>Groq LLM · Llama-3<br/>→ narrative_analysis, consistency"]
+            A2["2️⃣ SensorAgent<br/>IsolationForest Telemetry Model<br/>→ anomaly_score, impact_vector"]
+            A3["3️⃣ TextAgent<br/>Groq LLM · Llama-3 + PII Scrubbing<br/>→ narrative_analysis, consistency"]
+        end
+
+        subgraph SYNTHESIS["Evidence Synthesis & Verification"]
             A4["4️⃣ CrossModalAgent<br/>Groq LLM Multi-Evidence Fusion<br/>→ cross_modal_score, contradictions"]
             A5["5️⃣ RiskEngine<br/>Weighted Agent Aggregation<br/>→ fraud_score, risk_level"]
             A6["6️⃣ AdversarialVerifier<br/>Groq LLM Adversarial Challenge<br/>→ verified/flagged, challenge_results"]
-            A7["7️⃣ ExplanationAgent<br/>Groq LLM Evidence Summary<br/>→ human_readable_explanation"]
-            A8["8️⃣ CommunicationAgent<br/>Groq LLM Final Report<br/>→ claim_letter, recommendation"]
+            A7["7️⃣ ExplanationAgent<br/>Rule-based Synthesis Engine<br/>→ human_readable_explanation"]
+            A8["8️⃣ CommunicationAgent<br/>Customer Comms Generator<br/>→ claim_letter, recommendation"]
         end
+
+        PARALLEL_FANOUT --> A4
+        A4 --> A5 --> A6 --> A7 --> A8
 
         subgraph FINALIZE["🔒 Finalization"]
             FN1["Finalize Node<br/>Consistency check + fail-closed gate"]
@@ -41,7 +47,7 @@ flowchart TB
 
         subgraph BLOCKCHAIN_GATE["⛓️ Blockchain Authorization"]
             BG1{"blockchain_allowed?"}
-            BG2["Blockchain Certificate Node<br/>Register on Sepolia"]
+            BG2["Blockchain Certificate Node<br/>Dynamic Gas & Nonce Relayer"]
             BG3["Skip — Assessment denied"]
         end
     end

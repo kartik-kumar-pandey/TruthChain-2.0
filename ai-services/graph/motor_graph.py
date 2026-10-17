@@ -8,11 +8,11 @@ Flow:
 
     START
       ↓
-    ImageAgent
-      ↓
-    SensorAgent
-      ↓
-    TextAgent
+    ┌──────────────┬─────────────────┬──────────────┐
+    │              │                 │              │
+ ImageAgent    SensorAgent       TextAgent          │
+    │              │                 │              │
+    └──────────────┴─────────────────┴──────────────┘
       ↓
     CrossModalAgent
       ↓
@@ -2361,19 +2361,34 @@ builder.add_node(
 # EDGES
 # ============================================================
 
+# Parallel evidence collection fan-out:
+# ImageAgent, SensorAgent, and TextAgent have zero mutual dependencies
+# and execute concurrently from START.
 builder.add_edge(
     START,
     "image",
 )
 
 builder.add_edge(
-    "image",
+    START,
     "sensor",
 )
 
 builder.add_edge(
-    "sensor",
+    START,
     "text",
+)
+
+# Fan-in barrier: CrossModalAgent executes once all three evidence
+# modalities have finished and their reports are merged into state.
+builder.add_edge(
+    "image",
+    "cross_modal",
+)
+
+builder.add_edge(
+    "sensor",
+    "cross_modal",
 )
 
 builder.add_edge(

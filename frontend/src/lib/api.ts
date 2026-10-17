@@ -194,6 +194,46 @@ export const api = {
     );
   },
 
+  subscribeAssessmentStream(
+    claimId: string,
+    onUpdate: (data: any) => void,
+    onComplete?: (data: any) => void,
+    onError?: (err: any) => void,
+  ): () => void {
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+    const eventSource = new EventSource(
+      `${backendUrl}/api/v1/claims/${encodeURIComponent(claimId)}/assessment/events`,
+    );
+
+    eventSource.addEventListener("assessment_update", (e) => {
+      try {
+        onUpdate(JSON.parse(e.data));
+      } catch {
+        // ignore parse error
+      }
+    });
+
+    eventSource.addEventListener("assessment_complete", (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (onComplete) onComplete(data);
+      } catch {
+        // ignore parse error
+      }
+      eventSource.close();
+    });
+
+    eventSource.onerror = (err) => {
+      if (onError) onError(err);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  },
+
   getBlockchainStatus(): Promise<BlockchainStatus> {
     return backendRequest<BlockchainStatus>("/api/v1/blockchain/status");
   },

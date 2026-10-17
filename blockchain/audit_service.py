@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import random
+import threading
 import time
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -97,6 +98,8 @@ class BlockchainAuditService:
         self._contract = None
         self._is_live_chain = False
         self._simulated_chain: Dict[str, Dict[str, Any]] = {}
+        self._nonce_lock = threading.Lock()
+        self._current_nonce: Optional[int] = None
         self._init_web3()
 
     def _init_web3(self) -> None:
@@ -209,13 +212,20 @@ class BlockchainAuditService:
                 accounts = self._w3.eth.accounts
                 sender = accounts[0] if accounts else None
                 if sender:
+                    with self._nonce_lock:
+                        on_chain_nonce = self._w3.eth.get_transaction_count(sender, "pending")
+                        if self._current_nonce is None or self._current_nonce < on_chain_nonce:
+                            self._current_nonce = on_chain_nonce
+                        assigned_nonce = self._current_nonce
+                        self._current_nonce += 1
+
                     tx_call = self._contract.functions.registerAssessment(
                         rec_bytes32,
                         img_bytes32,
                         pred_bytes32,
                         model_version,
                     )
-                    tx_hash_bytes = tx_call.transact({"from": sender})
+                    tx_hash_bytes = tx_call.transact({"from": sender, "nonce": assigned_nonce})
                     receipt = self._w3.eth.wait_for_transaction_receipt(tx_hash_bytes, timeout=10)
                     tx_hex = "0x" + receipt.transactionHash.hex()
                     block_num = receipt.blockNumber

@@ -1,7 +1,15 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import FieldMapDraw from "@/components/ui/FieldMapDraw";
+import dynamic from "next/dynamic";
+const FieldMapDraw = dynamic(() => import("@/components/ui/FieldMapDraw"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[450px] w-full rounded-2xl border border-white/10 bg-slate-900/60 flex items-center justify-center text-slate-400">
+      Loading interactive field map...
+    </div>
+  ),
+});
 import { useRouter } from "next/navigation";
 import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -130,12 +138,82 @@ const createClaimSchema = z.object({
 
 type CreateClaimInput = z.infer<typeof createClaimSchema>;
 
+/**
+ * Compress an image file using an offscreen canvas before converting to
+ * a base64 data URL.
+ *
+ * - Images already under SKIP_THRESHOLD_BYTES pass through unchanged.
+ * - Larger images are resized so neither dimension exceeds MAX_DIMENSION,
+ *   then re-encoded as JPEG at QUALITY.
+ * - The 224×224 vision models downstream are unaffected because they
+ *   resize internally.
+ */
+const MAX_DIMENSION = 1600;
+const COMPRESSION_QUALITY = 0.85;
+const SKIP_THRESHOLD_BYTES = 400 * 1024; // 400 KB
+
 function readFileAsDataURL(file: File): Promise<string> {
+  // Small files: pass through directly (no quality loss)
+  if (file.size <= SKIP_THRESHOLD_BYTES) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      try {
+        let { width, height } = img;
+
+        // Scale down if either dimension exceeds MAX_DIMENSION
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          // Fallback: return raw data URL if canvas unavailable
+          URL.revokeObjectURL(objectUrl);
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", COMPRESSION_QUALITY);
+
+        URL.revokeObjectURL(objectUrl);
+        resolve(compressed);
+      } catch (err) {
+        URL.revokeObjectURL(objectUrl);
+        reject(err);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      // Fallback: return raw data URL if image decode fails
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    };
+
+    img.src = objectUrl;
   });
 }
 

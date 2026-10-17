@@ -35,8 +35,8 @@ flowchart TB
 
         subgraph PARALLEL["🔀 Parallel Evidence Fan-Out"]
             direction LR
-            A2["2️⃣ ImageAgent<br/>Crop Image CNN<br/>→ crop_class, damage_level"]
-            A3["3️⃣ SatelliteAgent<br/>CDSE Sentinel-2 · CropAgent v0.2<br/>→ predicted_crop, NDVI, 77-features"]
+            A2["2️⃣ ImageAgent<br/>Crop Image DINOv2 ViT-S/14<br/>→ crop_class, damage_level"]
+            A3["3️⃣ SatelliteAgent<br/>CDSE Sentinel-2 + Disk Caching<br/>→ predicted_crop, NDVI, 77-features"]
             A4["4️⃣ SensorAgent<br/>Weather/Soil Analysis<br/>→ rainfall, soil_moisture, anomaly"]
         end
 
@@ -55,7 +55,7 @@ flowchart TB
 
         subgraph BLOCKCHAIN_GATE["⛓️ Blockchain Authorization"]
             BG1{"blockchain_allowed?"}
-            BG2["Blockchain Certificate Node<br/>Register on Sepolia"]
+            BG2["Blockchain Certificate Node<br/>Dynamic Gas & Nonce Relayer"]
             BG3["Skip — Assessment denied"]
         end
     end

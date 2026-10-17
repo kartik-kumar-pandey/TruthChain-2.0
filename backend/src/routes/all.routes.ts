@@ -495,6 +495,76 @@ export async function registerAllRoutes(app: FastifyInstance) {
     return reply.send({ assessment });
   });
 
+  // GET /api/v1/claims/:id/assessment/events (Server-Sent Events for live assessment pipeline tracking)
+  app.get("/api/v1/claims/:id/assessment/events", async (req: FastifyRequest, reply: FastifyReply) => {
+    await requireAuth(req, reply);
+    if (!req.user) return;
+
+    const { id } = req.params as { id: string };
+
+    reply.raw.setHeader("Content-Type", "text/event-stream");
+    reply.raw.setHeader("Cache-Control", "no-cache");
+    reply.raw.setHeader("Connection", "keep-alive");
+    reply.raw.setHeader("Access-Control-Allow-Origin", "*");
+    reply.raw.flushHeaders?.();
+
+    const sendEvent = (event: string, data: any) => {
+      reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    let iterations = 0;
+    const maxIterations = 30; // 30 seconds max timeout
+    const pollInterval = setInterval(async () => {
+      iterations++;
+      try {
+        const assessment = await prisma.assessment.findUnique({
+          where: { claimId: id },
+          include: {
+            agentRuns: { include: { evidence: true } },
+            riskScores: true,
+            blockchainRecord: true,
+          },
+        });
+
+        if (assessment) {
+          sendEvent("assessment_update", {
+            status: assessment.status,
+            finalVerdict: assessment.finalVerdict,
+            fraudScore: assessment.fraudScore,
+            completedAt: assessment.completedAt,
+            agentRunsCount: assessment.agentRuns.length,
+            agentRuns: assessment.agentRuns,
+            blockchainRecord: assessment.blockchainRecord,
+          });
+
+          if (assessment.status === "COMPLETED" || assessment.status === "FAILED") {
+            sendEvent("assessment_complete", {
+              status: assessment.status,
+              finalVerdict: assessment.finalVerdict,
+              assessmentId: assessment.id,
+            });
+            clearInterval(pollInterval);
+            reply.raw.end();
+            return;
+          }
+        }
+
+        if (iterations >= maxIterations) {
+          sendEvent("assessment_timeout", { message: "Polling timed out after 30 seconds." });
+          clearInterval(pollInterval);
+          reply.raw.end();
+        }
+      } catch (err) {
+        clearInterval(pollInterval);
+        reply.raw.end();
+      }
+    }, 1000);
+
+    req.raw.on("close", () => {
+      clearInterval(pollInterval);
+    });
+  });
+
   // ==========================================
   // PUBLIC VERIFICATION API
   // ==========================================

@@ -50,6 +50,18 @@ FINAL_VERDICTS = {
 }
 
 
+def merge_reports(
+    a: Dict[str, Any],
+    b: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Deterministic merge reducer for agent_reports in concurrent LangGraph execution.
+    """
+    merged = dict(a or {})
+    merged.update(b or {})
+    return merged
+
+
 # ======================================================================
 # Agent State
 # ======================================================================
@@ -99,7 +111,10 @@ class AgentState(TypedDict, total=False):
     # Individual agent reports
     # ------------------------------------------------------------------
 
-    agent_reports: Dict[str, Any]
+    agent_reports: Annotated[
+        Dict[str, Any],
+        merge_reports,
+    ]
 
     # ------------------------------------------------------------------
     # Pipeline integrity

@@ -680,9 +680,8 @@ def create_certificate(
             claim_id
         )
 
-    except ContractLogicError as exc:
+    except Exception as exc:
         error_text = str(exc)
-
         if "Assessment not found" in error_text:
             logger.info(
                 "No existing assessment found for %s. "
@@ -690,22 +689,13 @@ def create_certificate(
                 claim_id,
             )
             existing = None
-
         else:
             logger.exception(
-                "Blockchain lookup reverted unexpectedly "
+                "Failed while checking existing assessment "
                 "for claim %s",
                 claim_id,
             )
             raise
-
-    except Exception:
-        logger.exception(
-            "Failed while checking existing assessment "
-            "for claim %s",
-            claim_id,
-        )
-        raise
 
     # ---------------------------------------------------------------
     # Step 3: Existing assessment
@@ -830,6 +820,21 @@ def create_certificate(
 
     gas_price = w3.eth.gas_price
 
+    priority_fee = w3.to_wei(1, "gwei")
+    max_fee = max(gas_price * 2, priority_fee + gas_price, priority_fee * 2)
+
+    try:
+        estimated_gas = contract.functions.registerAssessment(
+            record_id,
+            image_hash,
+            prediction_hash,
+            model_version,
+        ).estimate_gas({"from": account.address})
+        gas_limit = max(int(estimated_gas * 1.35), 750000)
+    except Exception as gas_err:
+        logger.warning("Gas estimation failed (%s); using conservative 800k limit", gas_err)
+        gas_limit = 800000
+
     transaction = contract.functions.registerAssessment(
         record_id,
         image_hash,
@@ -840,16 +845,9 @@ def create_certificate(
             "from": account.address,
             "nonce": nonce,
             "chainId": chain_id,
-            "gas": 300000,
-            "maxPriorityFeePerGas": (
-                w3.to_wei(
-                    1,
-                    "gwei",
-                )
-            ),
-            "maxFeePerGas": (
-                gas_price * 2
-            ),
+            "gas": gas_limit,
+            "maxPriorityFeePerGas": priority_fee,
+            "maxFeePerGas": max_fee,
         }
     )
 

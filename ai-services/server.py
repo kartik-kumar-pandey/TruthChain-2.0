@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import sys
 import time
 import uuid
@@ -641,9 +642,25 @@ def _normalize_claim_id(claim_id: str) -> str:
     return normalized
 
 
+def _scrub_pii(text: str) -> str:
+    """
+    Scrub Personally Identifiable Information (PII) from claim descriptions
+    before embedding generation or consensus evidence evaluation.
+    """
+    # Email addresses
+    text = re.sub(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", "[REDACTED_EMAIL]", text)
+    # 16-digit credit/debit card numbers (with optional dashes or spaces)
+    text = re.sub(r"\b(?:\d{4}[-\s]?){3}\d{4}\b", "[REDACTED_CARD]", text)
+    # Social Security / National ID numbers (XXX-XX-XXXX)
+    text = re.sub(r"\b\d{3}[-\s]\d{2}[-\s]\d{4}\b", "[REDACTED_SSN]", text)
+    # Phone numbers (international and 10-digit formats)
+    text = re.sub(r"\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b", "[REDACTED_PHONE]", text)
+    return text
+
+
 def _normalize_description(description: str) -> str:
     """
-    Normalize and validate claim narrative.
+    Normalize, sanitize PII, and validate claim narrative.
     """
 
     normalized = description.strip()
@@ -653,6 +670,9 @@ def _normalize_description(description: str) -> str:
             status_code=422,
             detail="description must not be empty or whitespace.",
         )
+
+    # Clean sensitive PII before pipeline ingestion
+    normalized = _scrub_pii(normalized)
 
     if len(normalized) > MAX_DESCRIPTION_LENGTH:
         raise HTTPException(

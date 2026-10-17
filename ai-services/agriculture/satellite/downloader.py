@@ -1192,6 +1192,19 @@ def download_asset(
         destination
     )
 
+    # Local disk caching optimization: if the file already exists and is non-empty,
+    # return the cached asset directly to avoid redundant remote bandwidth consumption.
+    if destination.exists() and destination.is_file():
+        file_size = destination.stat().st_size
+        if file_size > 0:
+            cached_sha = _hash_file(destination)
+            return DownloadedAsset(
+                source_uri=uri,
+                local_path=destination,
+                size_bytes=file_size,
+                sha256=cached_sha,
+            )
+
     if is_s3_uri(uri):
         return _download_s3(
             uri,

@@ -29,22 +29,23 @@ To launch all components of TruthChain, start each of the 4 dedicated services i
                     │                                     │
                     ▼                                     ▼
            FastAPI AI Engine                     FastAPI AI Engine
-        /api/motor/verify (:8000)             /api/agri/verify (:8000)
+      /api/v1/consensus/evaluate (:8000)      /api/v1/agriculture/claim (:8000)
                     │                                     │
                     ▼                                     ▼
      ┌────────────────────────────┐        ┌────────────────────────────┐
      │ Motor LangGraph Pipeline   │        │ Agri LangGraph Pipeline    │
-     │  1. Text Agent (LLM)       │        │  1. Text Agent (Crop NLP)  │
-     │  2. Vision Agent           │        │  2. Crop RGB Agent         │
-     │  3. Sensor Agent           │        │  3. Sentinel-2 Agent       │
-     │  4. CrossModal Fusion      │        │  4. Weather Sensor Agent   │
-     │  5. Fraud Investigation    │        │  5. CrossModal Fusion      │
-     │  6. Risk Scoring Engine    │        │  6. Weather Verification   │
-     │  7. Adversarial Detector   │        │  7. Loss Risk Engine       │
-     │  8. Decision Consensus     │        │  8. EXIF Manipulation      │
-     └──────────────┬─────────────┘        │  9. Settlement Consensus   │
-                    │                      │ 10. Ledger Serialization   │
-                    │                      └──────────────┬─────────────┘
+     │  Parallel Fan-Out:         │        │  1. Text Agent (Crop NLP)  │
+     │   - Text Agent (LLM + PII) │        │  Parallel Fan-Out:         │
+     │   - Vision Agent (ResNet50)│        │   - Crop RGB (DINOv2)      │
+     │   - Sensor Agent (ML IF)   │        │   - Sentinel-2 (STAC/COG)  │
+     │  Synthesis Chain:          │        │   - Weather Sensor Agent   │
+     │   - CrossModal Fusion      │        │  Synthesis Chain:          │
+     │   - Risk Scoring Engine    │        │   - CrossModal Fusion      │
+     │   - Adversarial Verifier   │        │   - Investigation Agent    │
+     │   - Explanation Agent      │        │   - Loss Risk Engine       │
+     │   - Communication Agent    │        │   - Adversarial Verifier   │
+     │   - Finalize Gate          │        │   - Decision Engine        │
+     └──────────────┬─────────────┘        └──────────────┬─────────────┘
                     └──────────────────┬──────────────────┘
                                        │
                                        ▼

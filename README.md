@@ -68,17 +68,19 @@ flowchart TB
     F1[Frontend Claim Form] --> API[AI Service :8000 /api/motor/verify]
     
     subgraph Motor LangGraph State Machine
-        API --> A1[1. TextAgent - Groq LLM NLP Parsing]
-        A1 --> A2[2. ImageAgent - ResNet-50 Vision Classifier]
-        A2 --> A3[3. SensorAgent - Telemetry Anomaly Detection]
-        A3 --> A4[4. CrossModal - Multimodal Correlation]
-        A4 --> A5[5. Investigation - Historical Fraud Check]
-        A5 --> A6[6. RiskEngine - Fraud Risk Scoring]
-        A6 --> A7[7. Adversarial - Synthetic & Manipulation Audit]
-        A7 --> A8[8. DecisionEngine - Consensus Verdict]
+        API --> PF[Parallel Evidence Fan-Out]
+        PF --> A1[1. TextAgent - Groq LLM + PII Scrubbing]
+        PF --> A2[2. ImageAgent - ResNet-50 Vision Classifier]
+        PF --> A3[3. SensorAgent - Telemetry Anomaly Detection]
+        A1 & A2 & A3 --> A4[4. CrossModal - Multimodal Correlation]
+        A4 --> A5[5. RiskEngine - Fraud Risk Scoring]
+        A5 --> A6[6. AdversarialVerifier - Multi-Challenge Audit]
+        A6 --> A7[7. ExplanationAgent - Synthesis]
+        A7 --> A8[8. CommunicationAgent - Comms Generation]
+        A8 --> FIN[9. Finalize Fail-Closed Gate]
     end
 
-    A8 --> BC[Blockchain Node :8545 - Hardhat/Sepolia]
+    FIN --> BC[Blockchain Node :8545 - Sepolia AssessmentRegistry]
     BC --> DB[Prisma PostgreSQL / SQLite Record]
     DB --> UI[Next.js Dashboard UI]
 ```
