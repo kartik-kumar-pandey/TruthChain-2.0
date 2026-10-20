@@ -59,16 +59,19 @@ export default fp(async (app: FastifyInstance) => {
     try {
       let sub: string | undefined;
       let permissions: string[] = [];
+      let tokenPayload: any = null;
 
       // Try verifying with remote JWKS or decode payload in dev mode
       try {
         const jwks = createRemoteJWKSet(new URL(env.BETTER_AUTH_JWKS_URL));
         const { payload } = await jwtVerify<TokenPayload>(token, jwks);
+        tokenPayload = payload;
         sub = payload.sub;
         permissions = normalizePermissions(payload);
       } catch (jwksError) {
         // Fallback: decode JWT for local development / testing if JWKS is unavailable
         const decoded = decodeJwt<TokenPayload>(token);
+        tokenPayload = decoded;
         if (decoded && decoded.sub) {
           sub = decoded.sub;
           permissions = normalizePermissions(decoded);
@@ -76,6 +79,7 @@ export default fp(async (app: FastifyInstance) => {
           throw jwksError;
         }
       }
+
 
       if (!sub) {
         request.log.warn("Authenticated token does not contain a subject");
@@ -98,8 +102,8 @@ export default fp(async (app: FastifyInstance) => {
         },
       });
 
-      // Auto-provision default org & user in development mode for seamless local DX if not existing
-      if (!user && env.NODE_ENV === "development") {
+      // Auto-provision default org & user for authenticated Google users if not yet existing in DB
+      if (!user) {
         let org = await prisma.organization.findFirst();
         if (!org) {
           org = await prisma.organization.create({
@@ -110,13 +114,18 @@ export default fp(async (app: FastifyInstance) => {
             },
           });
         }
+        
+        const email = tokenPayload?.email || "investigator@truthchain.ai";
+        const firstName = tokenPayload?.given_name || tokenPayload?.name || "TruthChain";
+        const lastName = tokenPayload?.family_name || "Investigator";
+
         user = await prisma.user.create({
           data: {
             organizationId: org.id,
             externalAuthId: sub,
-            email: "investigator@acme.com",
-            firstName: "TruthChain",
-            lastName: "Investigator",
+            email,
+            firstName,
+            lastName,
             role: "INVESTIGATOR",
             status: "ACTIVE",
           },
@@ -127,6 +136,7 @@ export default fp(async (app: FastifyInstance) => {
           },
         });
       }
+
 
       if (!user) {
         request.log.warn({ authUserId: sub }, "Authenticated identity is not provisioned in TruthChain");
