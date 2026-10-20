@@ -143,10 +143,8 @@ export function buildApp() {
   );
 
   // API routes
-  app.register(claimRoutes, {
-    prefix: "/api/v1",
-  });
   app.register(registerAllRoutes);
 
   return app;
-}
+}
+
