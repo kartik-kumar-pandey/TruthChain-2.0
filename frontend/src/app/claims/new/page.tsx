@@ -835,12 +835,15 @@ export default function CreateClaimPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-cyan-400" />
-              Claim & Vehicle Information
+              {selectedDomain === "agriculture" ? "Agricultural Claim & Field Specifications" : "Vehicle & Policy Information"}
             </CardTitle>
             <CardDescription>
-              Administrative identifiers and incident context.
+              {selectedDomain === "agriculture"
+                ? "Enter crop details, loss percentage, peril type, and draw field polygon on the map."
+                : "Enter policy number, vehicle registration, and incident details."}
             </CardDescription>
           </CardHeader>
+
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               label="Claim Number"
@@ -1067,13 +1070,15 @@ export default function CreateClaimPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileImage className="h-4 w-4 text-cyan-400" />
-              Visual Evidence
+              {selectedDomain === "agriculture" ? "Ground-Level Crop Photo" : "Visual Damage Evidence"}
             </CardTitle>
             <CardDescription>
-              Upload vehicle damage photo. Accepted: JPG, PNG, WEBP, BMP, TIFF.
-              Max 10 MiB.
+              {selectedDomain === "agriculture"
+                ? "Upload a clear ground-level photograph of your affected crop (sugarcane, wheat, rice, etc.). DINOv2 ViT will analyze plant health and disease."
+                : "Upload vehicle damage photo. Accepted: JPG, PNG, WEBP. ResNet-50 Vision classifier will detect damage classes."}
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <input
               id="damage-image-upload"
@@ -1193,108 +1198,109 @@ export default function CreateClaimPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-cyan-400" />
-              Sensor Telemetry
-            </CardTitle>
-            <CardDescription>
-              USER TELEMETRY · Raw readings passed to SensorAgent. Leave fields
-              blank if not measured.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <FormField
-              label="Speed (km/h)"
-              error={errors.speed?.message}
-            >
-              <Input
-                type="number"
-                step="any"
-                placeholder="38.0"
-                {...register("speed")}
-              />
-            </FormField>
-            <FormField
-              label="Accel X (g)"
-              error={errors.accel_x?.message}
-            >
-              <Input
-                type="number"
-                step="any"
-                placeholder="2.0"
-                {...register("accel_x")}
-              />
-            </FormField>
-            <FormField
-              label="Accel Y (g)"
-              error={errors.accel_y?.message}
-            >
-              <Input
-                type="number"
-                step="any"
-                placeholder="3.0"
-                {...register("accel_y")}
-              />
-            </FormField>
-            <FormField
-              label="Accel Z (g)"
-              error={errors.accel_z?.message}
-            >
-              <Input
-                type="number"
-                step="any"
-                placeholder="9.2"
-                {...register("accel_z")}
-              />
-            </FormField>
-            <FormField
-              label="Speed Change"
-              error={errors.speed_change?.message}
-            >
-              <Input
-                type="number"
-                step="any"
-                placeholder="4.0"
-                {...register("speed_change")}
-              />
-            </FormField>
-            <FormField
-              label="Accel Change"
-              error={errors.acceleration_change?.message}
-            >
-              <Input
-                type="number"
-                step="any"
-                placeholder="1.5"
-                {...register("acceleration_change")}
-              />
-            </FormField>
-            <FormField
-              label="GPS Distance (m)"
-              error={errors.gps_distance?.message}
-            >
-              <Input
-                type="number"
-                step="any"
-                placeholder="42.86"
-                {...register("gps_distance")}
-              />
-            </FormField>
-            <FormField
-              label="GPS Speed"
-              error={errors.gps_speed?.message}
-            >
-              <Input
-                type="number"
-                step="any"
-                placeholder="42.86"
-                {...register("gps_speed")}
-              />
-            </FormField>
-          </CardContent>
-        </Card>
+        {selectedDomain !== "agriculture" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-cyan-400" />
+                Sensor Telemetry
+              </CardTitle>
+              <CardDescription>
+                VEHICLE TELEMETRY · Raw speed and accelerometer readings passed to SensorAgent.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <FormField
+                label="Speed (km/h)"
+                error={errors.speed?.message}
+              >
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="38.0"
+                  {...register("speed")}
+                />
+              </FormField>
+              <FormField
+                label="Accel X (g)"
+                error={errors.accel_x?.message}
+              >
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="2.0"
+                  {...register("accel_x")}
+                />
+              </FormField>
+              <FormField
+                label="Accel Y (g)"
+                error={errors.accel_y?.message}
+              >
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="3.0"
+                  {...register("accel_y")}
+                />
+              </FormField>
+              <FormField
+                label="Accel Z (g)"
+                error={errors.accel_z?.message}
+              >
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="9.2"
+                  {...register("accel_z")}
+                />
+              </FormField>
+              <FormField
+                label="Speed Change"
+                error={errors.speed_change?.message}
+              >
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="4.0"
+                  {...register("speed_change")}
+                />
+              </FormField>
+              <FormField
+                label="Accel Change"
+                error={errors.acceleration_change?.message}
+              >
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="1.5"
+                  {...register("acceleration_change")}
+                />
+              </FormField>
+              <FormField
+                label="GPS Distance (m)"
+                error={errors.gps_distance?.message}
+              >
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="42.86"
+                  {...register("gps_distance")}
+                />
+              </FormField>
+              <FormField
+                label="GPS Speed"
+                error={errors.gps_speed?.message}
+              >
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="42.86"
+                  {...register("gps_speed")}
+                />
+              </FormField>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -1316,12 +1322,17 @@ export default function CreateClaimPage() {
             >
               <Textarea
                 rows={7}
-                placeholder="Describe the incident, location of damage, circumstances, etc. Example: My vehicle was involved in a front-right collision. The front fender and bumper are heavily dented and scratched, and the front lamp area is damaged."
+                placeholder={
+                  selectedDomain === "agriculture"
+                    ? "Describe the crop loss incident, damage circumstances, affected acreage, and weather events. Example: Severe unseasonal hailstorm and rainfall on 17 September caused extensive lodging and waterlogging in my sugarcane plot, resulting in an estimated 70% yield loss."
+                    : "Describe the incident, location of damage, circumstances, etc. Example: My vehicle was involved in a front-right collision. The front fender and bumper are heavily dented and scratched, and the front lamp area is damaged."
+                }
                 {...register("description")}
               />
             </FormField>
           </CardContent>
         </Card>
+
 
         <Card className="border-cyan-900/50 bg-cyan-950/10">
           <CardContent className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-5">
