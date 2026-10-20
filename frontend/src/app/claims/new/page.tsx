@@ -553,8 +553,6 @@ export default function CreateClaimPage() {
   };
 
   const fetchSatellitePreview = async () => {
-    if (polygonPoints.length < 3) return;
-
     const geoJsonStr = control._formValues.field_geojson;
     if (!geoJsonStr) return;
 
@@ -564,6 +562,7 @@ export default function CreateClaimPage() {
     } catch {
       return;
     }
+
 
     // Use event_date or default to recent range
     const eventDate = control._formValues.event_date || "17 September 2026";
@@ -582,7 +581,6 @@ export default function CreateClaimPage() {
     const startDate = startD.toISOString().split("T")[0];
 
     setSatLoading(true);
-    setFieldConfirmed(true);
 
     try {
       const result = await api.satellitePreview({
@@ -592,6 +590,7 @@ export default function CreateClaimPage() {
         max_cloud: 20,
       });
       setSatPreview(result);
+      setFieldConfirmed(true);
     } catch (err) {
       console.error("Satellite preview failed:", err);
       setSatPreview({
@@ -603,6 +602,7 @@ export default function CreateClaimPage() {
       setSatLoading(false);
     }
   };
+
 
   const onSubmit = handleSubmit(async (values) => {
     if (selectedDomain === "agriculture") {
