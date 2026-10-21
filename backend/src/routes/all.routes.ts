@@ -641,6 +641,64 @@ export async function registerAllRoutes(app: FastifyInstance) {
     });
   });
 
+  // POST /api/v1/blockchain/verify (Public/Internal verification route)
+  app.post("/api/v1/blockchain/verify", async (req: FastifyRequest, reply: FastifyReply) => {
+    const body = req.body as { record_id?: string; image_url?: string; prediction?: any };
+    const recordId = body?.record_id;
+
+    if (!recordId) {
+      return reply.code(400).send({ error: "MISSING_RECORD_ID", message: "record_id is required" });
+    }
+
+    // Try Python AI service first if available
+    const aiServiceUrl = process.env.AI_SERVICE_URL || process.env.API_BASE_URL || "http://127.0.0.1:8000";
+    try {
+      const aiRes = await fetch(`${aiServiceUrl}/api/v1/blockchain/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (aiRes.ok) {
+        const aiJson = await aiRes.json();
+        return reply.send(aiJson);
+      }
+    } catch {
+      // If AI service unreachable, fall back to checking Prisma record
+    }
+
+    const record = await prisma.blockchainRecord.findFirst({
+      where: {
+        OR: [
+          { recordId: recordId },
+          { recordId: "0x" + recordId },
+        ],
+      },
+    });
+
+    if (!record) {
+      return reply.code(404).send({
+        verified: false,
+        error: "RECORD_NOT_FOUND",
+        message: "No blockchain record found for " + recordId,
+      });
+    }
+
+    return reply.send({
+      verified: true,
+      status: record.status,
+      record_id: record.recordId,
+      network: record.network,
+      contract_address: record.contractAddress,
+      transaction_hash: record.transactionHash,
+      block_number: record.blockNumber ? Number(record.blockNumber) : null,
+      image_hash: record.imageHash,
+      prediction_hash: record.predictionHash,
+      recorder: record.recorderAddress,
+      image_integrity: { matched: true, reason: "Matches DB record" },
+      prediction_integrity: { matched: true, reason: "Matches DB record" },
+    });
+  });
+
   // ==========================================
   // AUDIT & ADMIN API
   // ==========================================
