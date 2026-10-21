@@ -712,14 +712,14 @@ export default function ClaimDetailPage() {
   const claim = query.data;
 
   useEffect(() => {
-    const recId = claim?.certificate?.record_id || claim?.claim_id || claimId;
+    const recId = claim?.certificate?.record_id;
     if (recId) {
       verify.mutate({ record_id: recId });
     }
-  }, [claim?.certificate?.record_id, claim?.claim_id, claimId]);
+  }, [claim?.certificate?.record_id]);
 
   const runVerify = async () => {
-    const recId = claim?.certificate?.record_id || claim?.claim_id || claimId;
+    const recId = claim?.certificate?.record_id;
     if (!recId) return;
     await verify.mutateAsync({
       record_id: recId,
@@ -790,7 +790,7 @@ export default function ClaimDetailPage() {
         </Alert>
       )}
 
-      {verify.error && (
+      {claim && verify.error && (
         <Alert variant="warning">
           Verification error: {String(verify.error.message || verify.error)}
         </Alert>

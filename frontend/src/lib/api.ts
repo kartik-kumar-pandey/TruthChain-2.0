@@ -235,26 +235,36 @@ export const api = {
   },
 
   getBlockchainStatus(): Promise<BlockchainStatus> {
-    return backendRequest<BlockchainStatus>("/api/v1/blockchain/status");
+    return backendRequest<BlockchainStatus>("/api/v1/blockchain/status").catch(() =>
+      aiRequest<BlockchainStatus>("/api/v1/blockchain/status")
+    );
   },
 
   listBlockchainRecords(limit = 50): Promise<BlockchainRecord[]> {
     const safeLimit = Math.max(1, Math.min(limit, 500));
     return backendRequest<BlockchainRecord[]>(
       `/api/v1/blockchain/records?limit=${safeLimit}`,
+    ).catch(() =>
+      aiRequest<BlockchainRecord[]>(
+        `/api/v1/blockchain/records?limit=${safeLimit}`,
+      )
     );
   },
 
   getBlockchainRecord(recordId: string): Promise<BlockchainRecord> {
     return backendRequest<BlockchainRecord>(
       `/api/v1/blockchain/record/${encodeURIComponent(recordId)}`,
+    ).catch(() =>
+      aiRequest<BlockchainRecord>(
+        `/api/v1/blockchain/record/${encodeURIComponent(recordId)}`,
+      )
     );
   },
 
   verifyBlockchainRecord(
     payload: BlockchainVerifyRequest,
   ): Promise<BlockchainVerifyResponse> {
-    return backendRequest<BlockchainVerifyResponse>("/api/v1/blockchain/verify", {
+    return aiRequest<BlockchainVerifyResponse>("/api/v1/blockchain/verify", {
       method: "POST",
       body: JSON.stringify(payload),
     });

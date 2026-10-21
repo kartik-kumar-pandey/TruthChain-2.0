@@ -116,8 +116,13 @@ export async function registerAllRoutes(app: FastifyInstance) {
 
     const { id } = req.params as { id: string };
 
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+
     const claim = await prisma.claim.findFirst({
-      where: { id, organizationId: req.user.organizationId },
+      where: {
+        organizationId: req.user.organizationId,
+        ...(isUuid ? { OR: [{ id }, { claimNumber: id }] } : { claimNumber: id }),
+      },
       include: {
         submittedBy: true,
         images: true,
@@ -138,11 +143,22 @@ export async function registerAllRoutes(app: FastifyInstance) {
       },
     });
 
-    if (!claim) {
-      return reply.code(404).send({ error: "CLAIM_NOT_FOUND", message: "Claim not found" });
+    if (claim) {
+      return reply.send({ claim });
     }
 
-    return reply.send({ claim });
+    // Fallback: check Python AI Service memory / storage if claim was evaluated directly
+    try {
+      const aiRes = await fetch(`http://127.0.0.1:8000/api/v1/claims/${encodeURIComponent(id)}`);
+      if (aiRes.ok) {
+        const aiData = await aiRes.json();
+        return reply.send(aiData);
+      }
+    } catch {
+      // ignore connection error
+    }
+
+    return reply.code(404).send({ error: "CLAIM_NOT_FOUND", message: "Claim not found" });
   });
 
   // POST /api/v1/claims/:id/assign
