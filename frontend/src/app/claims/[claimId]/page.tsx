@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useClaim, useVerifyBlockchainRecord } from "@/hooks/useTruthChain";
@@ -709,7 +709,22 @@ export default function ClaimDetailPage() {
   const query = useClaim(claimId);
   const verify = useVerifyBlockchainRecord();
 
-  const claim = query.data;
+  const [cachedClaim, setCachedClaim] = useState<ClaimResult | null>(null);
+
+  useEffect(() => {
+    if (claimId && typeof window !== "undefined") {
+      try {
+        const raw = sessionStorage.getItem(`truthchain_claim_${claimId}`);
+        if (raw) {
+          setCachedClaim(JSON.parse(raw));
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [claimId]);
+
+  const claim = query.data || cachedClaim;
 
   useEffect(() => {
     const recId = claim?.certificate?.record_id;
@@ -760,7 +775,7 @@ export default function ClaimDetailPage() {
         </div>
       )}
 
-      {query.error && (
+      {!claim && query.error && (
         <Alert variant="danger">
           <div className="flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />

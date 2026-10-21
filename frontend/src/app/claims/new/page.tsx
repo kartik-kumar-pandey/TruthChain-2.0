@@ -660,8 +660,23 @@ export default function CreateClaimPage() {
 
       console.log("TruthChain Agriculture request:", agriPayload);
       try {
+        await api.createClaim({
+          claimNumber: values.claim_id,
+          domain: "AGRICULTURE",
+          description: values.description || `${values.crop || "Crop"} loss: ${values.event || "incident"}`,
+          incidentDate: values.event_date,
+          incidentLocation: values.location,
+        });
+      } catch (dbErr) {
+        console.warn("Neon DB agriculture claim creation note:", dbErr);
+      }
+
+      try {
         const result = await agriMutation.mutateAsync(agriPayload);
         console.log("TruthChain Agriculture response:", result);
+        if (result?.data && typeof window !== "undefined") {
+          sessionStorage.setItem(`truthchain_claim_${values.claim_id}`, JSON.stringify(result.data));
+        }
         router.push(`/claims/${encodeURIComponent(values.claim_id)}`);
       } catch (err) {
         console.error("TruthChain Agriculture API error:", err);
@@ -707,10 +722,28 @@ export default function CreateClaimPage() {
         metadata,
       };
 
+      // Persist in Neon DB via Node/Fastify backend
+      try {
+        await api.createClaim({
+          claimNumber: values.claim_id,
+          domain: "MOTOR",
+          description: values.description,
+          vehicleRegistration: values.vehicle_registration,
+          vehicleMake: values.vehicle_make_model,
+          incidentDate: values.incident_date,
+          incidentLocation: values.incident_location,
+        });
+      } catch (dbErr) {
+        console.warn("Neon DB claim creation note:", dbErr);
+      }
+
       console.log("TruthChain Motor API request (evaluate):", payload);
       try {
         const result = await motorMutation.mutateAsync(payload);
         console.log("TruthChain Motor API response:", result);
+        if (result?.data && typeof window !== "undefined") {
+          sessionStorage.setItem(`truthchain_claim_${values.claim_id}`, JSON.stringify(result.data));
+        }
         router.push(`/claims/${encodeURIComponent(values.claim_id)}`);
       } catch (err) {
         console.error("TruthChain Motor API error:", err);

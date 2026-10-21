@@ -184,6 +184,22 @@ export const api = {
 
   // ── Node/Fastify Backend (port 4000) — require auth ────────────────────
 
+  createClaim(payload: {
+    claimNumber: string;
+    domain?: string;
+    description?: string;
+    vehicleRegistration?: string;
+    vehicleMake?: string;
+    vehicleModel?: string;
+    incidentDate?: string;
+    incidentLocation?: string;
+  }): Promise<{ claim: any }> {
+    return backendRequest<{ claim: any }>("/api/v1/claims", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
   listClaims(): Promise<ClaimsListResponse> {
     return backendRequest<ClaimsListResponse>("/api/v1/claims");
   },

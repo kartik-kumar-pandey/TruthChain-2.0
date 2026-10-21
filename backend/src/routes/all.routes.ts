@@ -144,7 +144,52 @@ export async function registerAllRoutes(app: FastifyInstance) {
     });
 
     if (claim) {
-      return reply.send({ claim });
+      // Map Prisma Neon DB record to standard ClaimResult format
+      const formattedClaim = {
+        claim_id: claim.claimNumber || claim.id,
+        id: claim.id,
+        domain: (claim.domain || "MOTOR").toLowerCase(),
+        status: claim.status,
+        state: claim.assessment?.status || claim.status,
+        final_verdict: claim.assessment?.verdict || "PENDING",
+        fraud_score: claim.assessment?.riskScores[0]?.finalScore ?? 0,
+        pipeline_status: claim.assessment?.status || "COMPLETED",
+        data: {
+          policy_number: claim.policyId || "POL-2026",
+          vehicle_registration: claim.claimNumber,
+          incident_date: claim.createdAt ? new Date(claim.createdAt).toISOString().split("T")[0] : "",
+          claim_text: claim.description || "",
+          text: claim.description || "",
+        },
+        agent_reports: (claim.assessment?.agentRuns || []).reduce((acc: any, run: any) => {
+          const key = run.agentName.split(" ")[0].trim();
+          acc[key] = {
+            agent: key,
+            decision: run.decision,
+            risk_score: run.riskScore,
+            confidence: run.confidence,
+            processing_time_ms: run.processingTimeMs,
+            evidence: run.evidence?.map((e: any) => e.content) || [],
+          };
+          return acc;
+        }, {}),
+        certificate: claim.assessment?.blockchainRecord ? {
+          claim_id: claim.claimNumber || claim.id,
+          record_id: claim.assessment.blockchainRecord.recordId,
+          status: claim.assessment.blockchainRecord.status,
+          network: claim.assessment.blockchainRecord.network,
+          contract_address: claim.assessment.blockchainRecord.contractAddress,
+          transaction_hash: claim.assessment.blockchainRecord.transactionHash,
+          block_number: claim.assessment.blockchainRecord.blockNumber ? Number(claim.assessment.blockchainRecord.blockNumber) : null,
+          image_hash: claim.assessment.blockchainRecord.imageHash,
+          prediction_hash: claim.assessment.blockchainRecord.predictionHash,
+          recorder: claim.assessment.blockchainRecord.recorderAddress,
+          registered_at: claim.assessment.blockchainRecord.registeredAt ? new Date(claim.assessment.blockchainRecord.registeredAt).getTime() : null,
+        } : undefined,
+        blockchain_allowed: Boolean(claim.assessment?.blockchainRecord),
+      };
+
+      return reply.send(formattedClaim);
     }
 
     // Fallback: check Python AI Service memory / storage if claim was evaluated directly
