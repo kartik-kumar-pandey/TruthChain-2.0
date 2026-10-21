@@ -191,6 +191,10 @@ export const api = {
   getClaim(claimId: string): Promise<ClaimResult> {
     return backendRequest<ClaimResult>(
       `/api/v1/claims/${encodeURIComponent(claimId)}`,
+    ).catch(() =>
+      aiRequest<ClaimResult>(
+        `/api/v1/claims/${encodeURIComponent(claimId)}`,
+      )
     );
   },
 

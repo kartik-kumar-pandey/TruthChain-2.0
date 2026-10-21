@@ -72,13 +72,11 @@ def _resolve_image_path(image_input: Any) -> Optional[str]:
     Supports file paths, base64 data URLs, and synthetic fallback images.
     """
     if isinstance(image_input, (str, Path)):
-        p = Path(image_input)
-        if p.exists() and p.is_file():
-            return str(p)
-
-        if str(image_input).startswith("data:image/"):
+        # Handle data URLs first so the base64 string is not checked with Path(image_input).exists(),
+        # which triggers [Errno 36] File name too long on Linux/POSIX.
+        if str(image_input).startswith("data:image/") or ";base64," in str(image_input):
             try:
-                header, encoded = str(image_input).split(",", 1)
+                _, encoded = str(image_input).split(",", 1)
                 image_bytes = base64.b64decode(encoded)
                 with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
                     tmp.write(image_bytes)
@@ -86,6 +84,13 @@ def _resolve_image_path(image_input: Any) -> Optional[str]:
                     return tmp.name
             except Exception:
                 pass
+
+        try:
+            p = Path(image_input)
+            if p.exists() and p.is_file():
+                return str(p)
+        except Exception:
+            pass
 
     try:
         from PIL import Image

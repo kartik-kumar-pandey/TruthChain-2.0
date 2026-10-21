@@ -313,36 +313,23 @@ def _resolve_image_path(image_input: Any) -> Optional[str]:
     """
 
     if isinstance(image_input, (str, Path)):
-
-        p = Path(image_input)
-
-        if p.exists() and p.is_file():
-            return str(p)
-
-        if str(image_input).startswith("data:image/"):
-
+        if str(image_input).startswith("data:image/") or ";base64," in str(image_input):
             try:
                 _, encoded = str(image_input).split(",", 1)
-
-                image_bytes = base64.b64decode(
-                    encoded
-                )
-
-                with tempfile.NamedTemporaryFile(
-                    suffix=".jpg",
-                    delete=False,
-                ) as tmp:
-
+                image_bytes = base64.b64decode(encoded)
+                with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
                     tmp.write(image_bytes)
                     tmp.flush()
-
                     return tmp.name
-
             except Exception:
+                logger.exception("Failed to decode image data URL.")
 
-                logger.exception(
-                    "Failed to decode image data URL."
-                )
+        try:
+            p = Path(image_input)
+            if p.exists() and p.is_file():
+                return str(p)
+        except Exception:
+            pass
 
     return None
 
